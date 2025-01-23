@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بازی پینگ پنگ</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>بازی پینگ پنگ</h1>
+        <div class="game">
+            <div class="paddle" id="player"></div>
+            <div class="paddle" id="computer"></div>
+            <div class="ball" id="ball"></div>
+        </div>
+        <div class="scoreboard">
+            <div>امتیاز: <span id="score">0</span></div>
+            <div>بیشترین رکورد: <span id="highscore">0</span></div>
+        </div>
+        <div class="controls">
+            <button onclick="setDifficulty('easy')">آسان</button>
+            <button onclick="setDifficulty('medium')">متوسط</button>
+            <button onclick="setDifficulty('hard')">سخت</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
