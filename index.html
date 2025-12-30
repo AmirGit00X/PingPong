@@ -1,29 +1,135 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بازی دوز</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>پنل مدیریت چت‌روم</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;700&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; background: #0f172a; color: white; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        h1 { color: #38bdf8; text-align: center; }
+        
+        /* بخش لاگین */
+        #admin-login { text-align: center; margin-top: 100px; }
+        input { padding: 12px; border-radius: 8px; border: none; margin: 10px; width: 250px; }
+        button { padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; background: #38bdf8; font-weight: bold; }
+
+        /* بخش مدیریت */
+        .section { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #334155; }
+        .btn-del { background: #ef4444; color: white; padding: 5px 10px; font-size: 12px; }
+        .btn-ban { background: #f59e0b; color: white; padding: 5px 10px; font-size: 12px; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>بازی دوز 🎮</h1>
-        <div class="board" id="board"></div>
-        <div class="scoreboard">
-            <p>امتیاز من: <span id="userScore">0</span></p>
-            <p>امتیاز ربات: <span id="botScore">0</span></p>
+        <div id="admin-login">
+            <h1>ورود مدیریت</h1>
+            <input type="password" id="admin-pass" placeholder="رمز عبور مدیر...">
+            <button onclick="checkPass()">ورود</button>
         </div>
-        <button id="restartButton">تکرار بازی</button>
-        <div class="level-selection">
-            <label for="level">سطح بازی:</label>
-            <select id="level">
-                <option value="easy">آسان</option>
-                <option value="medium">متوسط</option>
-                <option value="hard">سخت</option>
-            </select>
+
+        <div id="admin-content" class="hidden">
+            <h1>داشبورد مدیریت 🛠️</h1>
+            
+            <div class="section">
+                <h3>عملیات سریع</h3>
+                <button onclick="clearAllMessages()" style="background: #b91c1c;">پاکسازی کل چت‌روم (حذف همه پیام‌ها)</button>
+            </div>
+
+            <div class="section">
+                <h3>مدیریت پیام‌ها (۵۰ پیام آخر)</h3>
+                <div id="msg-list"></div>
+            </div>
+
+            <div class="section">
+                <h3>لیست سیاه (کاربران بن شده)</h3>
+                <div id="ban-list"></div>
+            </div>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTZ68yTUyrpoKJdVRQzY7ZJ2mUUrWv-PM",
+            databaseURL: "https://my-online-game-91998-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // رمز عبور پیش‌فرض (می‌توانید اینجا عوض کنید)
+        const MASTER_PASS = "admin123";
+
+        function checkPass() {
+            const pass = document.getElementById('admin-pass').value;
+            if(pass === MASTER_PASS) {
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-content').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                alert("رمز اشتباه است!");
+            }
+        }
+
+        function loadAdminData() {
+            // بارگذاری پیام‌ها برای حذف
+            db.ref('messages').limitToLast(50).on('value', snap => {
+                const list = document.getElementById('msg-list');
+                list.innerHTML = "";
+                snap.forEach(child => {
+                    const data = child.val();
+                    list.innerHTML += `
+                        <div class="item">
+                            <span><b>${data.name}:</b> ${data.message.substring(0,30)}...</span>
+                            <div>
+                                <button class="btn-ban" onclick="banUser('${data.name}')">بن کردن کاربر</button>
+                                <button class="btn-del" onclick="deleteMsg('${child.key}')">حذف پیام</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+
+            // بارگذاری لیست بن شده‌ها
+            db.ref('blacklist').on('value', snap => {
+                const list = document.getElementById('ban-list');
+                list.innerHTML = "";
+                snap.forEach(child => {
+                    list.innerHTML += `
+                        <div class="item">
+                            <span>${child.val().name}</span>
+                            <button class="btn-del" onclick="unbanUser('${child.key}')">آزاد سازی</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function deleteMsg(id) {
+            if(confirm("پیام حذف شود؟")) db.ref('messages').child(id).remove();
+        }
+
+        function clearAllMessages() {
+            if(confirm("آیا مطمئن هستید که می‌خواهید تمام تاریخچه چت را پاک کنید؟")) {
+                db.ref('messages').remove();
+            }
+        }
+
+        function banUser(userName) {
+            if(confirm(`آیا از بن کردن ${userName} مطمئن هستید؟`)) {
+                db.ref('blacklist').push({ name: userName });
+            }
+        }
+
+        function unbanUser(id) {
+            db.ref('blacklist').child(id).remove();
+        }
+    </script>
 </body>
 </html>
